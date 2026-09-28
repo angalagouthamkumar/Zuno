@@ -30,15 +30,14 @@ export default function Login() {
     try {
         const data = await login(form.email, form.password);
         
-        // Inside Login.jsx -> handleSubmit
-        if (data && (data.success || data.accessToken)) {
+        if (data && data.accessToken) {
             setLoading(false);
             const token = data.accessToken;
             const baseUrl = (import.meta.env.VITE_DASHBOARD_URL || "https://zuno-dd7j.vercel.app").replace(/\/$/, "");
-            const redirectUrl = token ? `${baseUrl}?token=${encodeURIComponent(token)}` : baseUrl;
+            const redirectUrl = `${baseUrl}?token=${encodeURIComponent(token)}`;
             window.location.href = redirectUrl;
         } else {
-            setError("Server validation completed with an irregular payload.");
+            setError("Authentication succeeded but failed to receive access token. Please try again.");
             setLoading(false);
         }
     } catch (err) {

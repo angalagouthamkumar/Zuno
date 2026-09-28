@@ -3,7 +3,7 @@ import axios from "axios";
 import { VerticalGraph } from "./VerticleGraph";
 
 // Dynamically points to Render in production
-const API_URL = process.env.REACT_APP_API_BASE_URL || 'https://zuno-trading-backend.onrender.com';
+const API_URL = process.env.REACT_APP_API_BASE_URL || 'https://zuno-h2dg.onrender.com';
 
 const Holdings = () => {
   const [holdingsData, setHoldingsData] = useState([]);

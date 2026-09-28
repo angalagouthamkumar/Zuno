@@ -6,7 +6,7 @@ const AuthContext = createContext(null);
 axios.defaults.withCredentials = true;
 
 // Dynamically points to Render in production
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://zuno-trading-backend.onrender.com';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://zuno-h2dg.onrender.com';
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);

@@ -43,11 +43,14 @@ export default function Signup() {
                 const baseUrl = (import.meta.env.VITE_DASHBOARD_URL || "https://zuno-dd7j.vercel.app").replace(/\/$/, "");
                 try {
                     const loginData = await login(form.email, form.password);
-                    const token = loginData?.accessToken;
-                    const redirectUrl = token ? `${baseUrl}?token=${encodeURIComponent(token)}` : baseUrl;
-                    window.location.href = redirectUrl;
+                    if (loginData && loginData.accessToken) {
+                        const token = loginData.accessToken;
+                        window.location.href = `${baseUrl}?token=${encodeURIComponent(token)}`;
+                    } else {
+                        navigate("/login");
+                    }
                 } catch (loginErr) {
-                    window.location.href = baseUrl;
+                    navigate("/login");
                 }
             }
             } catch (err) {
