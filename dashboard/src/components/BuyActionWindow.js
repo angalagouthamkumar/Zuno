@@ -4,8 +4,8 @@ import axios from "axios";
 import GeneralContext from "./GeneralContext";
 import "./BuyActionWindow.css";
 
-// Dynamically points to Render in production, or localhost during development
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+// Dynamically points to Render in production
+const API_URL = process.env.REACT_APP_API_BASE_URL || 'https://zuno-trading-backend.onrender.com';
 
 const BuyActionWindow = ({ uid }) => {
   const [stockQuantity, setStockQuantity] = useState(1);
@@ -18,12 +18,16 @@ const BuyActionWindow = ({ uid }) => {
 
     console.log("Buy button clicked. Sending data...");
 
+    const token = sessionStorage.getItem("accessToken");
     axios
       .post(`${API_URL}/newOrder`, {
         name: uid,
         qty: Number(stockQuantity), 
         price: Number(stockPrice),   
         mode: "BUY",
+      }, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        withCredentials: true
       })
       .then((response) => {
         console.log("Order placed successfully:", response.data);

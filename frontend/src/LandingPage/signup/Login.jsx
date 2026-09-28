@@ -33,8 +33,10 @@ export default function Login() {
         // Inside Login.jsx -> handleSubmit
         if (data && (data.success || data.accessToken)) {
             setLoading(false);
-            // CHANGE THIS from localhost to your live production Dashboard Link:
-            window.location.href = "https://zuno-dd7j.vercel.app/";
+            const token = data.accessToken;
+            const baseUrl = (import.meta.env.VITE_DASHBOARD_URL || "https://zuno-dd7j.vercel.app").replace(/\/$/, "");
+            const redirectUrl = token ? `${baseUrl}?token=${encodeURIComponent(token)}` : baseUrl;
+            window.location.href = redirectUrl;
         } else {
             setError("Server validation completed with an irregular payload.");
             setLoading(false);

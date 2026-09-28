@@ -23,8 +23,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 const allowedOrigins = [
-  process.env.FRONTEND_URL,   // https://zuno-ee9u.vercel.app (NO trailing slash)
-  process.env.DASHBOARD_URL   // https://zuno-dd7j.vercel.app (NO trailing slash)
+  "https://zuno-ee9u.vercel.app",
+  "https://zuno-dd7j.vercel.app"
 ];
 
 app.use(cors({
@@ -41,7 +41,9 @@ app.use(cors({
     }
     return callback(null, true);
   },
-  credentials: true
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
 app.use("/api/auth", authRoutes);
@@ -58,17 +60,22 @@ app.get("/allholdings", authMiddleware, async (req, res) => {
                     );
 
                     const quote = response.data;
+                    const price = quote?.c ?? holding.price ?? holding.avg;
+                    const change = quote?.d ?? 0;
+                    const changePercent = quote?.dp ?? 0;
+                    const dayStr = quote?.dp != null ? `${quote.dp.toFixed(2)}%` : (holding.day || "0.00%");
+                    const netStr = holding.avg ? `${(((price - holding.avg) / holding.avg) * 100).toFixed(2)}%` : (holding.net || "0.00%");
 
                     return {
                         ...holding.toObject(),
-                        price: quote.c,
-                        change: quote.d,
-                        changePercent: quote.dp,
-                        currentValue: quote.c * holding.qty,
-                        pnl: (quote.c - holding.avg) * holding.qty,
-                        day: `${quote.dp.toFixed(2)}%`,
-                        net: `${(((quote.c - holding.avg) / holding.avg) * 100).toFixed(2)}%`,
-                        isLoss: quote.c < holding.avg
+                        price: price,
+                        change: change,
+                        changePercent: changePercent,
+                        currentValue: price * holding.qty,
+                        pnl: (price - holding.avg) * holding.qty,
+                        day: dayStr,
+                        net: netStr,
+                        isLoss: price < holding.avg
                     };
                 } catch (error) {
                     return holding;
@@ -106,7 +113,11 @@ app.post("/newOrder", authMiddleware, async (req, res) => {
         });
 
         await newOrder.save();
-        res.send("New order created");
+        res.status(201).json({
+            success: true,
+            message: "Order saved successfully",
+            order: newOrder
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

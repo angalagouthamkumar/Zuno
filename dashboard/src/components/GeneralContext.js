@@ -7,9 +7,9 @@ axios.defaults.withCredentials = true;
 // Create the raw context tracking engine instance
 const GeneralContext = createContext(null);
 
-// Dynamically points to Render in production, or localhost during development
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-const LANDING_PAGE_URL = 'https://zuno-ee9u.vercel.app';
+// Production Render backend and Vercel landing page configuration
+const API_URL = process.env.REACT_APP_API_BASE_URL || 'https://zuno-trading-backend.onrender.com';
+const LANDING_PAGE_URL = process.env.REACT_APP_LANDING_URL || 'https://zuno-ee9u.vercel.app';
 
 export const GeneralContextProvider = (props) => {
   const [isBuyWindowOpen, setIsBuyWindowOpen] = useState(false);
@@ -23,30 +23,62 @@ export const GeneralContextProvider = (props) => {
   useEffect(() => {
     const initializeDashboardAuth = async () => {
       try {
-        const refreshRes = await axios.post(`${API_URL}/api/auth/refresh`);
-        if (refreshRes.data && refreshRes.data.accessToken) {
-          // Explicitly assign the default common header for any sequential axios lifecycle requests
-          axios.defaults.headers.common["Authorization"] = `Bearer ${refreshRes.data.accessToken}`;
+        // 1. Check for token in URL parameters (cross-domain handoff from frontend)
+        const urlParams = new URLSearchParams(window.location.search);
+        let token = urlParams.get("token");
 
+        if (token) {
+          // Clean the token from the URL address bar immediately
+          window.history.replaceState({}, document.title, window.location.pathname || "/");
+          // Persist token in sessionStorage for reload persistence
+          sessionStorage.setItem("accessToken", token);
+        } else {
+          // Retrieve persisted token on page reloads
+          token = sessionStorage.getItem("accessToken");
+        }
+
+        // 2. If token is available, authenticate directly with Bearer header
+        if (token) {
+          axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
           try {
             const profileRes = await axios.get(`${API_URL}/api/auth/me`, {
-              headers: { Authorization: `Bearer ${refreshRes.data.accessToken}` },
+              headers: { Authorization: `Bearer ${token}` },
             });
-            if (profileRes.data.success) {
+            if (profileRes.data && profileRes.data.success) {
               setUser(profileRes.data.user);
-            } else {
-              console.warn("Profile success flag evaluated to false. Falling back.");
-              window.location.href = `${LANDING_PAGE_URL}/login`;
+              return;
             }
           } catch (profileErr) {
-            // FIX: Safely capture profile errors without instantly triggering a blind redirect loop
-            console.error("Backend accepted the refresh token, but rejected the Access Token at /me:", profileErr.response?.data || profileErr.message);
+            console.warn("Direct token validation failed, falling back to cookie refresh:", profileErr.message);
+            sessionStorage.removeItem("accessToken");
+            delete axios.defaults.headers.common["Authorization"];
           }
-        } else {
-          window.location.href = `${LANDING_PAGE_URL}/login`;
         }
+
+        // 3. Fallback: Cookie-based refresh session
+        const refreshRes = await axios.post(`${API_URL}/api/auth/refresh`, {}, { withCredentials: true });
+        if (refreshRes.data && refreshRes.data.accessToken) {
+          const newToken = refreshRes.data.accessToken;
+          sessionStorage.setItem("accessToken", newToken);
+          axios.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
+
+          const profileRes = await axios.get(`${API_URL}/api/auth/me`, {
+            headers: { Authorization: `Bearer ${newToken}` },
+          });
+          if (profileRes.data && profileRes.data.success) {
+            setUser(profileRes.data.user);
+            return;
+          }
+        }
+
+        // If all authentication attempts fail, redirect to login
+        sessionStorage.removeItem("accessToken");
+        delete axios.defaults.headers.common["Authorization"];
+        window.location.href = `${LANDING_PAGE_URL}/login`;
       } catch (err) {
         console.error("Session initialization completely failed:", err.response?.data || err.message);
+        sessionStorage.removeItem("accessToken");
+        delete axios.defaults.headers.common["Authorization"];
         window.location.href = `${LANDING_PAGE_URL}/login`;
       }
     };

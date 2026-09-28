@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 import { useGeneralContext } from "./GeneralContext";
 import axios from "axios";
 
-// Dynamically points to Render in production, or localhost during development
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-const LANDING_PAGE_URL = 'https://zuno-ee9u.vercel.app';
+// Dynamically points to Render in production
+const API_URL = process.env.REACT_APP_API_BASE_URL || 'https://zuno-trading-backend.onrender.com';
+const LANDING_PAGE_URL = process.env.REACT_APP_LANDING_URL || 'https://zuno-ee9u.vercel.app';
 
 const Menu = () => {
   const contextValues = useGeneralContext() || {};
@@ -43,10 +43,14 @@ const Menu = () => {
 
   const handleLogout = async () => {
     try {
-      await axios.post(`${API_URL}/api/auth/logout`);
+      sessionStorage.removeItem("accessToken");
+      delete axios.defaults.headers.common["Authorization"];
+      await axios.post(`${API_URL}/api/auth/logout`, {}, { withCredentials: true });
       window.location.href = `${LANDING_PAGE_URL}/login`;
     } catch (err) {
       console.error("Logout request failed:", err);
+      sessionStorage.removeItem("accessToken");
+      delete axios.defaults.headers.common["Authorization"];
       window.location.href = `${LANDING_PAGE_URL}/login`;
     }
   };

@@ -9,6 +9,13 @@ const generateRefreshToken = (userId) => {
     return jwt.sign({ id: userId }, process.env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
 };
 
+const cookieOptions = {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+    maxAge: 7 * 24 * 60 * 60 * 1000
+};
+
 exports.registerUser = async (req, res) => {
     try {
         const { username, email, password } = req.body;
@@ -65,13 +72,8 @@ exports.loginUser = async (req, res) => {
         user.refreshToken = refreshToken;
         await user.save();
 
-        // FIX: Enforced strict HTTPS cookie configurations for separate domain communication
-        res.cookie("refreshToken", refreshToken, {
-            httpOnly: true,
-            secure: true,        // Force true because Render is hosted on HTTPS
-            sameSite: "none",    // Cross-site allowed
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        });
+        // Cross-origin authentication cookie between Vercel subdomains and Render
+        res.cookie("refreshToken", refreshToken, cookieOptions);
 
         return res.status(200).json({
             success: true,

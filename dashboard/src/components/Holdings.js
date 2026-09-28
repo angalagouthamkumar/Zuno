@@ -2,15 +2,19 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { VerticalGraph } from "./VerticleGraph";
 
-// Dynamically points to Render in production, or localhost during development
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+// Dynamically points to Render in production
+const API_URL = process.env.REACT_APP_API_BASE_URL || 'https://zuno-trading-backend.onrender.com';
 
 const Holdings = () => {
   const [holdingsData, setHoldingsData] = useState([]);
 
   useEffect(() => {
+    const token = sessionStorage.getItem("accessToken");
     axios
-      .get(`${API_URL}/allholdings`)
+      .get(`${API_URL}/allholdings`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        withCredentials: true,
+      })
       .then((response) => {
         setHoldingsData(response.data);
       })
@@ -25,7 +29,7 @@ const Holdings = () => {
     datasets: [
       {
         label: 'Stock Name',
-        data: labels.map((stock) => stock.price),
+        data: holdingsData.map((stock) => stock.price),
         backgroundColor: 'rgba(255, 99, 132, 0.5)',
       },
       {
@@ -63,7 +67,7 @@ const Holdings = () => {
               const profitLoss = currValue - investment;
 
               const profClass = profitLoss >= 0 ? "profit" : "loss";
-              const dayClass = stock.day.includes("-") ? "loss" : "profit";
+              const dayClass = (stock.day && stock.day.includes("-")) ? "loss" : "profit";
 
               return (
                 <tr key={index}>
